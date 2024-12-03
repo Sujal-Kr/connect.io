@@ -8,6 +8,7 @@ export const login = async (req, res) => {
     try {
         const { username, password } = req.body
         const user = await userModel.findOne({ username }).select('+password')
+        console.log("i am in")
 
         if (!user) {
             return res.status(404).json({
@@ -21,7 +22,7 @@ export const login = async (req, res) => {
         }
         sendToken(res, user, 200, `Welcome back ${username}`)
     } catch (err) {
-        return res.json({ success: false, message: "Couldn't login! " + err.message })
+        return res.status(500).json({ success: false, message: "Couldn't login! " + err.message })
     }
 }
 

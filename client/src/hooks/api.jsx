@@ -10,7 +10,7 @@ const handleSendFriendRequestApi = async (userId) => {
     const id = toast.loading("Sending friend request..")
     try {
         setrequesetLoading(true)
-        const res = await axios.post(`${server}/api/v1/user/sendreques}`, { userId }, { withCredentials: true })
+        const res = await axios.post(`${server}/api/v1/user/sendrequest}`, { userId }, { withCredentials: true })
         if (res.data.success) {
             setData(res.data.data)
             toast.success("Friend request sent", { id })
@@ -26,30 +26,71 @@ const handleSendFriendRequestApi = async (userId) => {
 
 
 
-const useGetMessagesChunks = (chatId, page = 1) => {
-    const [chunks, setChunks] = useState([])
-    const [error, setError] = useState("")
+
+const useLoadChatDetails = (chatId, populate = false) => {
+    const [chat, setChat] = useState({})
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
     useEffect(() => {
-        const loadMessagesChunks = async () => {
-            setLoading(true)
-            setError("")
+        const loadChatDetails = async () => {
+            setLoading(true);
+            setError('')
             try {
-                const { data } = await axios.get(`${server}/api/v1/chat/message/${chatId}?page=${page}`,
-                    { withCredentials: true })
+                let url = `${server}/api/v1/chat/${chatId}`;
+                if (populate) url += '?populate=true';
+
+                const { data } = await axios.get(url, { withCredentials: true });
                 if (data.success) {
-                    setChunks[data.data]
+                    setChat(data.chat);
                 }
-            } catch (error) {
-                setError(error.response.data.message)
-                console.error(error.response.data.message)
-            }
-            finally {
-                setLoading(false)
+            } catch (err) {
+                setError(err.response?.data?.message || err.message || "Failed to load chat details")
+                console.error(err.response?.data?.message);
+            } finally {
+                setLoading(false);
             }
         }
-        loadMessagesChunks()
-    }, [chatId, page])
-    return { chunks, loading, error }
+        loadChatDetails()
+    }, [chatId])
+
+    return { chat, loading, error }
 }
-export { handleSendFriendRequestApi, useGetMessagesChunks }
+
+const useLoadMessageChunks = (chatId,page=1) => {
+    const [messages, setMessages] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
+    const [totalPage, setTotalPage] = useState(1)
+    useEffect(() => {
+        const loadinMessageChunks = async () => {
+            setLoading(true)
+            setError('')
+            try {
+                const { data } = await axios.get(
+                    `${server}/api/v1/chat/message/${chatId}?page=${page}`,
+                    { withCredentials: true }
+                );
+
+                if (data.success) {
+                    setMessages((prev) => [...data.data]);
+                    setTotalPage(data.totalPage);
+                }
+            } catch (error) {
+                setError(error.response?.data?.message || error.message || "Failed to messages chunks")
+                console.error(error.response?.data?.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadinMessageChunks()
+    }, [chatId,page])
+
+    return { messages,setMessages, loading, error, totalPage }
+}
+
+
+export {
+    handleSendFriendRequestApi,
+    useLoadChatDetails,
+    useLoadMessageChunks,
+}

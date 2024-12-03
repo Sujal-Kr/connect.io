@@ -12,7 +12,7 @@ import { connectDb } from './utils/features.js';
 import { errorMiddleware } from './utils/error.js';
 import { chatRouter } from './router/chat.router.js';
 import { adminRouter } from './router/admin.router.js';
-import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from './constants/events.js';
+import { NEW_MESSAGE, NEW_MESSAGE_ALERT, START_TYPING, STOP_TYPING } from './constants/events.js';
 import { getSocketIds } from './lib/helper.js';
 import { messageModel } from './models/message.model.js';
 import { corsOptions } from './constants/config.js';
@@ -24,6 +24,7 @@ const server = createServer(app)
 const io = new Server(server, {
     cors: corsOptions
 })
+app.set("io", io)
 const port = process.env.PORT
 
 connectDb()
@@ -51,19 +52,40 @@ io.on('connection', (socket) => {
 
     userSocketIds.set(user._id.toString(), socket.id)
     console.log(userSocketIds)
+
+    socket.on(START_TYPING, ({ chatId, members }) => {
+        try {
+            console.log("i am typing")
+            const socketIds = getSocketIds(members)
+            socket.to(socketIds).emit(START_TYPING, { chatId })
+        } catch (err) {
+            console.error("Socket Start Typing",err.message)
+        }
+    })
+
+    socket.on(STOP_TYPING, ({ chatId, members }) => {
+        try {
+            console.log("stop - typing")
+            const socketIds = getSocketIds(members)
+            socket.to(socketIds).emit(STOP_TYPING, { chatId })
+        } catch (err) {
+            console.error("Socket Stop Typing",err.message)
+        }
+    })
+
     socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
         try {
-            const realtimeMessage = { 
-                chatId, 
-                content: message, 
-                _id: uuid(), 
-                sender: { 
-                    _id: user._id, 
-                    name: user.name 
-                }, 
-                createdAt: new Date().toISOString() 
+            const realtimeMessage = {
+                chatId,
+                content: message,
+                _id: uuid(),
+                sender: {
+                    _id: user._id,
+                    name: user.name
+                },
+                createdAt: new Date().toISOString()
             }
-            console.log(realtimeMessage)
+
 
             const membersSocket = getSocketIds(members)
             const databaseMessage = {
@@ -71,8 +93,6 @@ io.on('connection', (socket) => {
                 sender: user._id,
                 chatId
             }
-            
-
 
             io.to(membersSocket).emit(NEW_MESSAGE, {
                 chatId,
@@ -85,6 +105,8 @@ io.on('connection', (socket) => {
             console.log(err.message)
         }
     })
+
+
 
     socket.on('disconnect', () => {
         userSocketIds.delete(user._id.toString())

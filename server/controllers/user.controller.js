@@ -24,7 +24,7 @@ const searchUser = async (req, res) => {
             _id: { $nin: friends },
             name: { $regex: name, $options: "i" }
         })
-        console.log(others)
+        
         const data = others.map(({ _id, name, avatar }) => {
             return {
                 _id,
@@ -55,7 +55,7 @@ const  sendRequest = async (req, res) => {
                 { sender: userId, receiver: req._id }
             ]
         })
-
+        // console.log(request)
         if (request) {
             return res.status(401).json({
                 success: false,
@@ -67,7 +67,7 @@ const  sendRequest = async (req, res) => {
             sender: req._id,
             receiver: userId,
         })
-        emitEvent(request, NEW_REQUEST, [userId], "request")
+        emitEvent(req, NEW_REQUEST, [userId], "request")
 
         return res.json({
             success: true,
@@ -88,7 +88,7 @@ const acceptRequest = async (req, res) => {
             .findById(requestId)
             .populate('sender', 'name')
             .populate('receiver', 'name')
-        console.log(request)
+        
         if (!request) {
             return res.json({
                 success: false,
@@ -137,7 +137,7 @@ const getMyNotifications = async (req, res) => {
         const requests = await requestModel.find({
             receiver: req._id,
         }).populate("sender", "name avatar")
-        console.log(requests)
+        
         const notifications = requests.map(({ _id, sender, }) => {
             return {
                 _id,

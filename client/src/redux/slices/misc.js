@@ -8,6 +8,7 @@ const initialState={
     isFileMenu:false,
     isMobile:false,
     isEdit:false,
+    isUploadingLoader:false
 
 }
 const miscSlice=createSlice({
@@ -34,6 +35,9 @@ const miscSlice=createSlice({
         },
         setIsEdit:(state,action)=>{
             state.isEdit=action.payload
+        },
+        setIsUploadingLoader:(state,action)=>{
+            state.isUploadingLoader=action.payload
         }
         
     }
@@ -46,5 +50,6 @@ export const {
     setIsNotifications,
     setIsAddMember,
     setIsEdit,
+    setIsUploadingLoader,
 }=miscSlice.actions;
 export default miscSlice.reducer

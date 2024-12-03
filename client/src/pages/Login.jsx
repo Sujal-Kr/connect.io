@@ -55,14 +55,14 @@ const Login = () => {
 					password: obj.password,
 				}, config)
 				
-				dispatch(userExists(true))
+				dispatch(userExists(data.user))
 				toast.success(data.message)
 				setFile(null)
 				e.target.reset();
 			}
 		} catch (err) {
 			toast.error(err.response.data.message)
-			console.error(err.message)
+			console.log(err.message)
 		}
 	};
 
@@ -91,7 +91,7 @@ const Login = () => {
 				const {data} =await axios.post(`${server}/api/v1/user/signup`,formData,{...config,headers:{
 					"Content-Type":"multipart/form-data"
 				}})
-				console.log("register",data)
+				// console.log("register",data)
 				toast.success(data.message)
 				setFile(null)
 				e.target.reset();

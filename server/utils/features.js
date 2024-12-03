@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import jwt from 'jsonwebtoken'
 import { v2 as cloudinary } from "cloudinary";
 import { v4 as uuid } from "uuid";
+import { getSocketIds } from "../lib/helper.js";
+
 
 export const options = {
     maxAge: 1000 * 24 * 60 * 60 * 2,
@@ -15,7 +17,7 @@ export const connectDb = () => {
     mongoose.connect(uri).then((db) => {
         console.log("Connected to database")
     }).catch((error) => {
-        console.error(error.message)
+        console.error("Database",error.message)
     })
 }
 
@@ -60,5 +62,12 @@ export const uploadToCloud = async (files) => {
 
 
 export const emitEvent = (req, event, users, data) => {
+  try {
+    const io=req.app.get('io');
+    const usersSocket=getSocketIds(users)
+    io.to(usersSocket).emit(event,data)
     console.log("Event emiting", event)
+  } catch (err) {
+    console.log("Failed to emit event", err.message)
+  }
 }

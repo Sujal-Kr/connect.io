@@ -66,11 +66,6 @@ const sendAttachemtsValidator = () => {
         body('chatId')
             .notEmpty()
             .withMessage('Chat id is required'),
-        check('attachments')
-            .notEmpty()
-            .withMessage("Attachment is required")
-            .isArray({ min: 1, max: 5 })
-            .withMessage('Upto 5 attachments only'),
     ]
 }
 const chatIdValidator = () => {

@@ -15,8 +15,7 @@ const Notifications = () => {
   const dispatch = useDispatch()
 
   const handleFriendRequest = async (id, action) => {
-    console.log(id, action)
-    console.log(action ? "Accepted" : "Rejected")
+    
     try {
       const { data } = await axios.patch(`${server}/api/v1/user/acceptrequest`,
         { requestId: id, accept: action }, { withCredentials: true })
@@ -35,8 +34,7 @@ const Notifications = () => {
       try {
         const { data } = await axios.get(`${server}/api/v1/user/notifications`, { withCredentials: true })
         if (data.success) {
-          console.log(data.notifications[0])
-          setNotifications(data.notifications)
+          setNotifications(data?.notifications)
         }
       } catch (err) {
         toast.error(err.response.data.message || "Failed to fetch notifications")

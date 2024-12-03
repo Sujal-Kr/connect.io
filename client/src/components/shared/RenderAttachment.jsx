@@ -6,9 +6,9 @@ const RenderAttachment = ({ file, url }) => {
 	switch (file) {
 		case "image":
 			return <img
-				src={transformImage(url,200)}
+				src={transformImage(url,150)}
 				alt='attachemnt'
-				className='h-40 w-32 object-contain'
+				className='w-32 object-contain'
 			/>
 		case "audio":return <audio src={url} controls preload='none'/>
 		default: return <FileIcon/>

@@ -22,7 +22,7 @@ const Profile = ({user}) => {
         <div className='h-full '>
             <div className='flex flex-col  justify-center items-center border-b gap-4  mb-3 py-12'>
                 <Avatar
-                    src={user.avatar?.url}
+                    src={user?.avatar?.url}
                     sx={{
                         width: "100px",
                         height: "100px",

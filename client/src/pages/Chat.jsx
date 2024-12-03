@@ -1,134 +1,162 @@
-import { AttachFileOutlined, ContactSupportOutlined, EmojiEmotionsOutlined, Send } from '@mui/icons-material'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import AppLayout from '../components/layout/AppLayout'
-import FileMenu from '../components/dialog/FileMenu'
-import { SampleMessages } from '../components/constants/SampleData'
-import MessageComponent from '../components/shared/MessageComponent'
-import { getSocket } from '../socket'
-import { NEW_MESSAGE } from '../constants/events'
-import { server } from '../constants/config'
-import axios from 'axios'
-import { useSocketEvents } from '../hooks/socket'
-import { useGetMessagesChunks } from '../hooks/api'
-import { useInfiniteScrollTop } from '6pp'
+import { AttachFileOutlined, EmojiEmotionsOutlined, Send } from '@mui/icons-material';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import FileMenu from '../components/dialog/FileMenu';
+import AppLayout from '../components/layout/AppLayout';
+import MessageComponent from '../components/shared/MessageComponent';
+import { NEW_MESSAGE, START_TYPING, STOP_TYPING } from '../constants/events';
+import { useLoadChatDetails, useLoadMessageChunks } from '../hooks/api';
+import { useSocketEvents } from '../hooks/socket';
+import { removeNewMessagesAlert } from '../redux/slices/chat';
+import { setIsFileMenu } from '../redux/slices/misc';
+import { getSocket } from '../socket';
 
 const Chat = ({ chatId, user }) => {
-    const containerRef=useRef(null)
-    const [loading, setLoading] = useState(false)
-    const [messageLoading, setMessageLoading] = useState(false)
-    const [chat, setChat] = useState({})
-    const [message, setMessage] = useState("")
-    const socket = getSocket()
-    const fileMenuRef = useRef(null)
-    const [messages, setMessages] = useState([])
-    const [page, setPage] = useState(1)
-    const [totalPage, setTotalPage] = useState(1)
+    const containerRef = useRef(null);
+    const [text, setText] = useState('');
 
-    const loadChatDetails = async (populate = false) => {
-        setLoading(true)
-        try {
-            let url = `${server}/api/v1/chat/${chatId}`
-            if (populate === true) url += "?populate=true"
-
-            const { data } = await axios.get(url, { withCredentials: true })
-            if (data.success) {
-                setChat(data.chat)
-            }
-        } catch (err) {
-            console.log(err.response?.data?.message)
-        } finally {
-            setLoading(false)
-        }
-    }
-    const handleNewMessage = useCallback((data) => {
-        setMessages((prev) => [...prev, data.message])
-    }, [])
-
-    const handlerRefresh = useCallback((data) => {
-
-    })
-    const eventHandlers = { [NEW_MESSAGE]: handleNewMessage }
-    useSocketEvents(socket, eventHandlers)
+    const [IamTyping, setIamTyping] = useState(false);
+    const [userTyping, setUserTyping] = useState(false);
 
 
-    useInfiniteScrollTop(containerRef,totalPage,page)
+    const socket = getSocket();
+
+    const fileMenuRef = useRef(null);
+    const timeOutRef = useRef(null);
+    const [page, setPage] = useState(1);
+    const dispatch = useDispatch();
+
+
+    const { chat, loading: chatLoading, error: chatError } = useLoadChatDetails(chatId)
+    const { messages, setMessages, loading: messageLoading, error: messageError, totalPage } = useLoadMessageChunks(chatId, page)
+
+    const newMessagesListener = useCallback((data) => {
+        if (data.chatId !== chatId) return
+        setMessages((prev) => [data.message, ...prev]);
+    }, [chatId]);
+
+    const startTypingListener = useCallback((data) => {
+        if (data.chatId !== chatId) return
+        setUserTyping(true)
+    }, [chatId]);
+
+    const stopTypingListener = useCallback((data) => {
+        if (data.chatId !== chatId) return
+        setUserTyping(false)
+    }, [chatId]);
+
+
+    // If we write this code inside the useEffect instead of writing inside the return 
+    // then it will re render the compoent uncessarily when it is not required for the first time .
+    // Writing the code inside the return will make sure that the peice of code only runs when the component
+    // unmounts or chatId changes.
 
     useEffect(() => {
-        loadChatDetails()
+        dispatch(removeNewMessagesAlert(chatId))
+        return () => {
+            setMessages([])
+            setText('')
+            setPage(1)
+        }
     }, [chatId])
 
+    const eventHandlers = {
+        [NEW_MESSAGE]: newMessagesListener,
+        [START_TYPING]: startTypingListener,
+        [STOP_TYPING]: stopTypingListener
+    };
+    useSocketEvents(socket, eventHandlers);
 
-    useEffect(() => {
-        const loadMessagesChunks = async () => {
-            setMessageLoading(true)
-            try {
-                const { data } = await axios.get(`${server}/api/v1/chat/message/${chatId}?page=${page}`,
-                    { withCredentials: true })
-                    
-                if (data.success) {
-                    // console.log(data.data)
-                    setMessages(data.data)
-                    setTotalPage(data.totalPage)
-                }
-            } catch (error) {
-                // setError(error.response.data.message)
-                console.error(error.response.data.message)
-            }
-            finally {
-                setMessageLoading(false)
-            }
-        }
-        loadMessagesChunks()
-    }, [chatId, page])
+    // useEffect(() => {
+    //     const handleScroll = () => {
+    //         const container = containerRef.current;
+    //         if (!container) return;
 
+    //         console.log('i am scrolling...')
+    //         if (container.scrollTop < 20 && page < totalPage) {
+    //             setPage((prev) => prev + 1);
+    //         }
+    //     };
 
+    //     const container = containerRef.current;
+    //     if (container) {
+    //         container.addEventListener('scroll', handleScroll);
+    //     }
+
+    //     return () => {
+    //         if (container) {
+    //             container.removeEventListener('scroll', handleScroll);
+    //         }
+    //     };
+    // }, []);
 
     const handleSendMessage = (e) => {
-        e.preventDefault()
-       
-        if (!message.trim()) return
-        console.log(message)
-        socket.emit(NEW_MESSAGE, { chatId, members: chat?.members, message })
-        setMessage("")
+        e.preventDefault();
+        if (!text.trim()) return;
+        socket.emit(NEW_MESSAGE, { chatId, members: chat?.members, message: text });
+        setText('');
+    };
+
+    const handleFileOpen = (e) => {
+        dispatch(setIsFileMenu(true))
     }
 
-    return (
-        loading ? (
-            <div>Loading...</div>
-        ) : (
-            <div className='flex flex-col h-[calc(100vh_-_5rem)]  justify-start bg-noise p-3'>
-                <div ref={containerRef} className='flex-1 flex flex-col gap-2  overflow-y-auto'>
-                    {!messageLoading&&messages?.map((message) => (
+    const handleChangeMessage = (e) => {
+        setText(e.target.value);
+        if (!IamTyping) {
+            socket.emit(START_TYPING, { chatId, members: chat.members })
+            setIamTyping(true)
+        }
+        if (timeOutRef) clearTimeout(timeOutRef.current)
+
+        timeOutRef.current = setTimeout(() => {
+            setIamTyping(false)
+            socket.emit(STOP_TYPING, { chatId, members: chat.members })
+        }, [2000])
+
+    }
+
+    return chatLoading ? (
+        <div>Loading...</div>
+    ) : (
+        <div className="flex flex-col h-[calc(100vh_-_5rem)] justify-start bg-noise p-3">
+            <div ref={containerRef} className="flex-1 flex flex-col-reverse gap-2 overflow-y-auto">
+                {messageLoading ? (
+                    <div>Loading...</div>
+                ) : (
+                    messages?.map((message) => (
                         <MessageComponent key={message?._id} message={message} user={user} />
-                    ))}
-                </div>
-                <form
-                    className='rounded-xl bg-white flex items-center justify-start m-1 p-4 gap-3 text-xs shadow-md'
-                    onSubmit={handleSendMessage}
-                >
-                    <input
-                        type="text"
-                        placeholder='Write your message...'
-                        className='w-full outline-none border-none !text-sm'
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                    />
-                    <EmojiEmotionsOutlined className='text-slate-500' sx={{ fontSize: '1.2rem' }} />
-                    <AttachFileOutlined ref={fileMenuRef} className='text-slate-500' sx={{ fontSize: '1.2rem' }} />
-                    <button className='shadow-md rounded-lg bg-darkgreen text-white' type='submit'>
-                        <Send sx={{
+                    ))
+                )}
+            </div>
+            <form
+                className="rounded-xl bg-white flex items-center justify-start m-1 p-4 gap-3 text-xs shadow-md"
+                onSubmit={handleSendMessage}
+            >
+                <input
+                    type="text"
+                    placeholder="Write your message..."
+                    className="w-full outline-none border-none !text-sm"
+                    value={text}
+                    onChange={handleChangeMessage}
+                />
+                <EmojiEmotionsOutlined className="text-slate-500" sx={{ fontSize: '1.2rem' }} />
+                <AttachFileOutlined ref={fileMenuRef} onClick={handleFileOpen} className="text-slate-500" sx={{ fontSize: '1.2rem' }} />
+                <button className="shadow-md rounded-lg bg-darkgreen text-white" type="submit">
+                    <Send
+                        sx={{
                             fontSize: '2rem',
                             padding: '0.5rem',
                             width: '2rem',
                             height: '2rem',
-                            transform: 'rotate(-30deg)'
-                        }} />
-                    </button>
-                </form>
-                <FileMenu />
-            </div>
-        )
-    )
-}
+                            transform: 'rotate(-30deg)',
+                        }}
+                    />
+                </button>
+            </form>
+            <FileMenu anchor={fileMenuRef.current} chatId={chatId} />
+        </div>
+    );
+};
 
-export default AppLayout()(Chat)
+export default AppLayout()(Chat);

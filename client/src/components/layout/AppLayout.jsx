@@ -1,5 +1,5 @@
 import Title from '../shared/Title'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Header from './Header'
 import ChatList from '../specific/ChatList'
 import { SampleChats } from '../constants/SampleData'
@@ -11,19 +11,30 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setIsMobile } from '../../redux/slices/misc'
 import { Drawer } from '@mui/material'
 import { getSocket } from '../../socket'
+import { useSocketEvents } from '../../hooks/socket'
+import { NEW_MESSAGE_ALERT, NEW_REQUEST } from '../../constants/events'
+import { increaseNewMessagesAlert, incrementNotificationCount } from '../../redux/slices/chat'
+import { getOrSaveFromStorage } from '../../lib/Features'
 
 
 const AppLayout = () => (WrappedComponent) => {
     return (props) => {
-        const socket=getSocket()
-        console.log(socket.id)
+        const socket = getSocket()
+        // console.log(socket.id)
         const params = useParams()
         const chatId = params.chatId
         const [loading, setLoading] = useState(false)
         const [chats, setChats] = useState([])
-        const {user} =useSelector((state)=>state.auth)
-        
+        const { user, loader } = useSelector((state) => state.auth)
         const { isMobile } = useSelector((state) => state.misc)
+        const { newMessagesAlert } = useSelector((state) => state.chat)
+
+        // console.log(newMessagesAlert)
+
+        useEffect(()=>{
+            getOrSaveFromStorage({key:[NEW_MESSAGE_ALERT],value:newMessagesAlert})
+        },[newMessagesAlert])
+
         const dispatch = useDispatch()
         useEffect(() => {
             const loadChats = async () => {
@@ -48,7 +59,22 @@ const AppLayout = () => (WrappedComponent) => {
         const handleDeleteChat = () => {
 
         }
+        const handleNewMessageAlert = useCallback((data) => {
+            if (chatId === data.chatId) return
 
+                dispatch(increaseNewMessagesAlert(data.chatId))
+
+        }, [chatId])
+        const handleNewRequest = useCallback(() => {
+            console.log('new request')
+            dispatch(incrementNotificationCount())
+        }, [])
+
+        const socketHandlers = {
+            [NEW_MESSAGE_ALERT]: handleNewMessageAlert,
+            [NEW_REQUEST]: handleNewRequest,
+        }
+        useSocketEvents(socket, socketHandlers)
         return (
             <div className='flex flex-col gap-1 h-screen'>
                 <Title />
@@ -60,6 +86,7 @@ const AppLayout = () => (WrappedComponent) => {
                             chatId={chatId}
                             onlineUser={["1", "2"]}
                             handleChatOption={handleDeleteChat}
+                            newMessagesAlert={newMessagesAlert}
                         />
                     </div>
                 </Drawer>
@@ -72,14 +99,18 @@ const AppLayout = () => (WrappedComponent) => {
                                     chatId={chatId}
                                     onlineUser={["1", "2"]}
                                     handleChatOption={handleDeleteChat}
+                                    newMessagesAlert={newMessagesAlert}
                                 />)
                         }
                     </div>
                     <div className='col-span-12 sm:col-span-8 md:col-span-5  lg:col-span-6   '>
-                        <WrappedComponent {...props} chatId={chatId} user={user}/>
+                        <WrappedComponent {...props} chatId={chatId} user={user} />
                     </div>
                     <div className='hidden md:block md:col-span-4 lg:col-span-3 p-2 h-full  bg-custom'>
-                        <Profile user={user} />
+                        {
+                            loader || !user ? <div>Loading</div> :
+                                <Profile user={user} />
+                        }
                     </div>
                 </div>
             </div>

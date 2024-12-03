@@ -1,8 +1,8 @@
-import { ALERT, NEW_ATTACHMENTS, NEW_MESSAGE_ALERT, REFETCH_CHATS } from "../constants/events.js"
+import { ALERT, NEW_ATTACHMENTS, NEW_MESSAGE, NEW_MESSAGE_ALERT, REFETCH_CHATS } from "../constants/events.js"
 import { chatModel } from "../models/chat.model.js"
 import { messageModel } from "../models/message.model.js"
 import { userModel } from "../models/user.model.js"
-import { emitEvent } from "../utils/features.js"
+import { emitEvent, uploadToCloud } from "../utils/features.js"
 
 const getMyChats = async (req, res) => {
 
@@ -223,7 +223,7 @@ const sendAttachemts = async (req, res) => {
             })
         }
         const files = req.files || []
-
+        
         if (files.length < 1) {
             return res.status(404).json({
                 success: false,
@@ -232,26 +232,28 @@ const sendAttachemts = async (req, res) => {
         }
 
 
-        const attachments = []
-
+        const result = await uploadToCloud(files)
+        
         const message = await messageModel.create({
             sender: req._id,
-            attachments,
+            attachments:result,
             chatId
         })
+
         const realtimeMessage = {
             ...message,
             sender: {
                 _id: req._id,
                 name: user?.name
             },
-
+            attachments:result.map((item)=>({ url: item.url })),
         }
-        emitEvent(req, NEW_ATTACHMENTS, chat.member, {
+        console.log(chat)
+        emitEvent(req, NEW_MESSAGE, chat.members, {
             message: realtimeMessage,
             chatId
         })
-        emitEvent(req, NEW_MESSAGE_ALERT, chat.member, { chatId })
+        emitEvent(req, NEW_MESSAGE_ALERT, chat.members, { chatId })
 
         return res.status(200).json({
             success: true,

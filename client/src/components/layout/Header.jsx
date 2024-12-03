@@ -14,6 +14,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { server } from '../../constants/config';
 import { userNotExists } from '../../redux/slices/auth';
 import { setIsMobile, setIsNotifications, setIsSearch } from '../../redux/slices/misc';
+import { Badge } from '@mui/material';
+import { resetNotificationCount } from '../../redux/slices/chat';
 
 // Lazy loading components
 const NewGroup = lazy(() => import('../specific/NewGroup'));
@@ -21,10 +23,14 @@ const Search = lazy(() => import('../specific/Search'));
 const Notifications = lazy(() => import('../specific/Notifications'));
 
 const Header = () => {
+
+
 	const navigate = useNavigate();
 	const dispatch = useDispatch();
 	const { isSearch, isNotifications } = useSelector((state) => state.misc);
-	// const [isNotifications, setIsNotifications] = useState(false);
+	const { notificationCount } = useSelector((state) => state.chat);
+	
+
 	const [isNewGroup, setIsNewGroup] = useState(false);
 	const { isMobile } = useSelector((state) => state.misc)
 
@@ -38,6 +44,7 @@ const Header = () => {
 	};
 	const handleOpenNotifications = () => {
 		dispatch(setIsNotifications(true));
+		dispatch(resetNotificationCount());
 	}
 	const handleLogout = async () => {
 		try {
@@ -59,7 +66,20 @@ const Header = () => {
 		// Implement menu bar functionality
 		dispatch(setIsMobile(!isMobile))
 	};
+	const IconStyling={
+		fontSize: "2rem",
+		padding: '5px',
+		fontWeight: "100",
+		"&:hover": {  // Correct hover syntax
+			borderRadius: "12px",
+			backgroundColor: "#fff",
+			color: "#4361ee !important",
+			boxShadow: "rgba(100, 100, 111, 0.2) 0px 7px 29px 0px",
+			transform: "scale(1.1)",
+			transitionDuration: "1000ms"
 
+		}
+	}
 
 	const menu = [
 		{
@@ -80,7 +100,8 @@ const Header = () => {
 		{
 			title: 'Notifications',
 			icon: NotificationsIcon,
-			handler: handleOpenNotifications
+			handler: handleOpenNotifications,
+			value:notificationCount
 		},
 		{
 			title: 'Logout',
@@ -108,22 +129,11 @@ const Header = () => {
 						onClick={item.handler}
 						className='flex gap-1 items-center cursor-pointer'
 					>
-						<item.icon
-							sx={{
-								fontSize: "2rem",
-								padding: '5px',
-								fontWeight: "100",
-								"&:hover": {  // Correct hover syntax
-									borderRadius: "12px",
-									backgroundColor: "#fff",
-									color: "#4361ee	",
-									boxShadow: "rgba(100, 100, 111, 0.2) 0px 7px 29px 0px",
-									transform: "scale(1.1)",
-									transitionDuration: "1000ms"
-
-								}
-							}}
+						{
+							item.value?<Badge badgeContent={item.value} sx={{color:"blue"}}><item.icon sx={IconStyling}/></Badge>:<item.icon
+							sx={IconStyling}
 						/>
+						}
 
 						<h4 className='text-xs hidden '>{item.title}</h4>
 					</div>

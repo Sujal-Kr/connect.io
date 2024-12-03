@@ -7,7 +7,7 @@ const ChatList = ({
   chats = [],
   chatId,
   onlineUser = [],
-  newMessages = [{ chatId: "", count: 0 }],
+  newMessagesAlert = [{ chatId: "", count: 0 }],
   handleChatOption
 }) => {
   const {user}=useSelector((state)=>state.auth)
@@ -28,7 +28,7 @@ const ChatList = ({
       <div className='flex-1 h-full overflow-y-auto'>
         {chats?.map((data, index) => {
           const { avatar, name, _id, members, groupChat } = data;
-          const newMessageAlert = newMessages?.find(({ chatId }) => chatId === _id);
+          const newMessageAlert = newMessagesAlert?.find(({ chatId }) => chatId === _id);
           const isOnline = onlineUser.includes(_id);
           const others=members.filter(({_id})=>_id!=user._id)
           

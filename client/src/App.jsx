@@ -6,7 +6,7 @@ import { LayoutLoader } from './components/layout/Loaders';
 import axios from 'axios'
 import { useDispatch, useSelector } from 'react-redux';
 import { server } from './constants/config';
-import { userExists } from './redux/slices/auth';
+import { userExists, userNotExists } from './redux/slices/auth';
 import { SocketProvider } from './socket';
 
 
@@ -34,13 +34,15 @@ const App = () => {
           dispatch(userExists(data.user))
         }
       })
-      .catch((err) => { console.error(err) })
+      .catch((err) => {
+
+        dispatch(userNotExists)
+        console.error(err.response?.data?.message || err.message)
+      })
 
   }, [dispatch])
 
-  return loader ? (
-    <LayoutLoader />
-  ) : (
+  return (
     <>
       <Suspense fallback={<LayoutLoader />}>
         <Toaster position="top-right" />
