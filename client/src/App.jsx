@@ -36,12 +36,15 @@ const App = () => {
       })
       .catch((err) => {
 
-        dispatch(userNotExists)
+        dispatch(userNotExists())
         console.error(err.response?.data?.message || err.message)
       })
 
   }, [dispatch])
 
+  if(loader==true){
+    return <LayoutLoader/>
+  }
   return (
     <>
       <Suspense fallback={<LayoutLoader />}>
@@ -54,6 +57,7 @@ const App = () => {
                 <Home />
               </SocketProvider>
             } />
+
             <Route path='/chat/:chatId' element={
               <SocketProvider>
                 <Chat />

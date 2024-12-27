@@ -16,6 +16,7 @@ const Login = () => {
 	const [error, setError] = useState('')
 	const [file, setFile] = useState(null)
 
+
 	const setProfile = (profile) => {
 		setFile(profile)
 	}
@@ -44,7 +45,7 @@ const Login = () => {
 
 			if (!result.success) {
 				const { message } = fromZodError(result.error).details[0];
-				console.log(message);
+				// console.log(message);
 				setError(message)
 				setTimeout(() => {
 					setError('')
@@ -54,7 +55,7 @@ const Login = () => {
 					username: obj.username,
 					password: obj.password,
 				}, config)
-				
+
 				dispatch(userExists(data.user))
 				toast.success(data.message)
 				setFile(null)
@@ -62,15 +63,15 @@ const Login = () => {
 			}
 		} catch (err) {
 			toast.error(err.response.data.message)
-			console.log(err.message)
+			// console.log(err.message)
 		}
 	};
 
-	const handleRegister = async(e) => {
+	const handleRegister = async (e) => {
 		try {
 			e.preventDefault();
 			const formData = new FormData(e.target);
-			formData.append("avatar",file)
+			formData.append("avatar", file)
 			const obj = {
 				name: formData.get('name') || '',  // Accessing form field values correctly
 				username: formData.get('username') || '',
@@ -78,7 +79,7 @@ const Login = () => {
 				password: formData.get('password') || '',
 				avatar: file
 			};
-			console.log([...formData.entries()]);
+			// console.log([...formData.entries()]);
 			const result = RegisterSchema.safeParse(obj);
 			if (!result.success) {
 				const { message } = fromZodError(result.error).details[0];
@@ -88,13 +89,20 @@ const Login = () => {
 					setError('')
 				}, 3000);
 			} else {
-				const {data} =await axios.post(`${server}/api/v1/user/signup`,formData,{...config,headers:{
-					"Content-Type":"multipart/form-data"
-				}})
+				const { data } = await axios.post(`${server}/api/v1/user/signup`, formData, {
+					...config, headers: {
+						"Content-Type": "multipart/form-data"
+					}
+				})
 				// console.log("register",data)
-				toast.success(data.message)
-				setFile(null)
-				e.target.reset();
+				if (data.success) {
+					dispatch(userExists(data.user))
+					toast.success(data.message)
+					setFile(null)
+					e.target.reset();
+					
+				}
+
 			}
 		} catch (err) {
 			toast.error(err.response.data.message)
@@ -110,7 +118,7 @@ const Login = () => {
 						<h1 className='text-center text-gray-500'>Welcome user!</h1>
 					</div>
 					<p className='text-xs text-red-500 text-center'>{error}</p>
-					<form onSubmit={handleLogin} className='flex gap-5 flex-col'>
+					<form onSubmit={handleLogin}  className='flex gap-5 flex-col'>
 						<input
 							type="text"
 							name='username'

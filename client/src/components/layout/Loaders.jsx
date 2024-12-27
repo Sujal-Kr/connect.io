@@ -1,6 +1,6 @@
 import React from 'react'
 
-export const LayoutLoader = () => {
+ const LayoutLoader = () => {
     return (
         <div className='h-[calc(100vh_-_4rem)]  grid grid-cols-12 gap-2'>
             <div className='hidden  sm:block sm:col-span-3 md:cols-3 '>
@@ -33,3 +33,14 @@ export const LayoutLoader = () => {
         </div>
     )
 }
+
+
+const TypingLoader=()=>{
+    return (
+        <div className='text-xs text-slate-600 my-3 animate-pulse'>
+            <p>Typing <span className=''>...</span></p>
+        </div>
+    )
+}
+
+export {LayoutLoader,TypingLoader}

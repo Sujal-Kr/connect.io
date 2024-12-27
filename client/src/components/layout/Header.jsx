@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { server } from '../../constants/config';
 import { userNotExists } from '../../redux/slices/auth';
-import { setIsMobile, setIsNotifications, setIsSearch } from '../../redux/slices/misc';
+import { setIsMobile, setIsNewGroup, setIsNotifications, setIsSearch } from '../../redux/slices/misc';
 import { Badge } from '@mui/material';
 import { resetNotificationCount } from '../../redux/slices/chat';
 
@@ -27,17 +27,17 @@ const Header = () => {
 
 	const navigate = useNavigate();
 	const dispatch = useDispatch();
-	const { isSearch, isNotifications } = useSelector((state) => state.misc);
+	const { isSearch, isNotifications,isNewGroup } = useSelector((state) => state.misc);
 	const { notificationCount } = useSelector((state) => state.chat);
 	
 
-	const [isNewGroup, setIsNewGroup] = useState(false);
+	// const [isNewGroup, setIsNewGroup] = useState(false);
 	const { isMobile } = useSelector((state) => state.misc)
 
 
 	// Handlers
 	const handleAdd = () => {
-		setIsNewGroup((prev) => !prev);
+		dispatch(setIsNewGroup(true))
 	};
 	const handleOpenSearch = () => {
 		dispatch(setIsSearch(true));
@@ -111,7 +111,7 @@ const Header = () => {
 	];
 
 	return (
-		<div className='p-4 flex justify-between bg-custom  shadow md:shadow-none text-slate-400'>
+		<div className='p-4 flex justify-between bg-slate-100  shadow md:shadow-none text-slate-400'>
 			<div className='flex items-center'>
 				<MenuIcon
 					sx={{

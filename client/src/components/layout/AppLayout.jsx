@@ -12,47 +12,50 @@ import { setIsMobile } from '../../redux/slices/misc'
 import { Drawer } from '@mui/material'
 import { getSocket } from '../../socket'
 import { useSocketEvents } from '../../hooks/socket'
-import { NEW_MESSAGE_ALERT, NEW_REQUEST } from '../../constants/events'
+import { ALERT, NEW_MESSAGE_ALERT, NEW_REQUEST, REFETCH_CHATS } from '../../constants/events'
 import { increaseNewMessagesAlert, incrementNotificationCount } from '../../redux/slices/chat'
 import { getOrSaveFromStorage } from '../../lib/Features'
+import { useLoadChats } from '../../hooks/api'
 
 
 const AppLayout = () => (WrappedComponent) => {
     return (props) => {
         const socket = getSocket()
-        // console.log(socket.id)
+
         const params = useParams()
         const chatId = params.chatId
-        const [loading, setLoading] = useState(false)
-        const [chats, setChats] = useState([])
+
         const { user, loader } = useSelector((state) => state.auth)
         const { isMobile } = useSelector((state) => state.misc)
         const { newMessagesAlert } = useSelector((state) => state.chat)
 
-        // console.log(newMessagesAlert)
 
-        useEffect(()=>{
-            getOrSaveFromStorage({key:[NEW_MESSAGE_ALERT],value:newMessagesAlert})
-        },[newMessagesAlert])
+        useEffect(() => {
+            getOrSaveFromStorage({ key: [NEW_MESSAGE_ALERT], value: newMessagesAlert })
+        }, [newMessagesAlert])
 
         const dispatch = useDispatch()
-        useEffect(() => {
-            const loadChats = async () => {
-                setLoading(true)
-                try {
-                    const { data } = await axios.get(`${server}/api/v1/chat/me`, { withCredentials: true })
+        // useEffect(() => {
+        //     const loadChats = async () => {
+        //         setLoading(true)
+        //         try {
+        //             const { data } = await axios.get(`${server}/api/v1/chat/me`, { withCredentials: true })
 
-                    if (data.success) {
-                        setChats(data.chats)
-                    }
-                } catch (err) {
-                    console.error(err.response?.data?.message)
-                }
-            }
-            loadChats()
-            setLoading(false)
-        }, [])
+        //             if (data.success) {
+        //                 setChats(data.chats)
+        //             }
+        //         } catch (err) {
+        //             console.error(err.response?.data?.message)
+        //         }
+        //     }
 
+        //     loadChats()
+        //     setLoading(false)
+        // }, [])
+
+        const { chats, loading, error, refetch } = useLoadChats()
+        // console.log()
+        // console.log(chats)
         const handleIsMobile = () => {
             dispatch(setIsMobile(!isMobile))
         }
@@ -61,18 +64,23 @@ const AppLayout = () => (WrappedComponent) => {
         }
         const handleNewMessageAlert = useCallback((data) => {
             if (chatId === data.chatId) return
-
-                dispatch(increaseNewMessagesAlert(data.chatId))
-
+            dispatch(increaseNewMessagesAlert(data.chatId))
         }, [chatId])
+
         const handleNewRequest = useCallback(() => {
             console.log('new request')
             dispatch(incrementNotificationCount())
         }, [])
 
+        const refetchListener = useCallback(() => {
+            console.log('refetch chats')
+            refetch()
+        }, [])
+
         const socketHandlers = {
             [NEW_MESSAGE_ALERT]: handleNewMessageAlert,
             [NEW_REQUEST]: handleNewRequest,
+            [REFETCH_CHATS]: refetchListener
         }
         useSocketEvents(socket, socketHandlers)
         return (

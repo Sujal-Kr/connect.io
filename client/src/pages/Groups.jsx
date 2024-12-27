@@ -5,6 +5,11 @@ import React, { lazy, memo, Suspense, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { SampleChats, SampleUsers } from '../components/constants/SampleData'
 import UserItem from '../components/shared/UserItem'
+import { useLoadAvailableFriends, useLoadChatDetails, useLoadMyGroups } from '../hooks/api'
+import { LayoutLoader } from '../components/layout/Loaders'
+import axios from 'axios'
+import { server } from '../constants/config'
+import toast from 'react-hot-toast'
 
 const ConfirmDeleteDialog = lazy(() => import('../components/dialog/ConfirmDeleteDialog'))
 const AddMemberDialog = lazy(() => import('../components/dialog/AddMemberDialog'))
@@ -20,6 +25,23 @@ const Groups = () => {
   const [groupNameUpdatedValue, setGroupNameUpdatedValue] = useState('')
   const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false)
 
+  const { data: groups, loading, error ,refetch} = useLoadMyGroups()
+  const { chat } = useLoadChatDetails(chatId, true)
+
+
+  useEffect(() => {
+    if (chat) {
+      setGroupName(chat.name)
+      setGroupNameUpdatedValue(chat.name)
+    }
+    return () => {
+      setGroupNameUpdatedValue('')
+      setGroupName('')
+      setIsEdit(false)
+    }
+
+  }, [chat])
+
   const handleDelete = () => { }
   const removeMemberHandler = (id) => {
     console.log('Remove handler', id)
@@ -32,9 +54,19 @@ const Groups = () => {
   }
   const openAddMemberHandler = () => { }
 
-  const updateGroupName = () => {
+  const updateGroupName = async() => {
     setIsEdit(false)
-    console.log('Group name updated to:', groupName)
+    setGroupName(groupNameUpdatedValue)
+
+    try {
+      const { data } =await  axios.patch(`${server}/api/v1/chat/${chatId}`, { groupName: groupNameUpdatedValue }, { withCredentials: true })
+      if (data.success) {
+        toast.success(data.message)
+        refetch()
+      }
+    } catch (err) {
+      toast.error(err.response?.data.message || err.message)
+    }
   }
 
   const handleMobile = () => {
@@ -44,17 +76,17 @@ const Groups = () => {
   const handleBackButton = () => {
     navigate('/')
   }
-  useEffect(() => {
-    if (chatId) {
-      setGroupNameUpdatedValue(`Group Name ${chatId}`)
-      setGroupName(`Group Name ${chatId}`)
-    }
-    return () => {
-      setGroupNameUpdatedValue('')
-      setGroupName('')
-      setIsEdit(false)
-    }
-  }, [chatId])
+  // useEffect(() => {
+  //   if (chatId) {
+  //     setGroupNameUpdatedValue(`Group Name ${chatId}`)
+  //     setGroupName(`Group Name ${chatId}`)
+  //   }
+  //   return () => {
+  //     setGroupNameUpdatedValue('')
+  //     setGroupName('')
+  //     setIsEdit(false)
+  //   }
+  // }, [chatId])
 
   const GroupName = (
     <div>
@@ -102,7 +134,7 @@ const Groups = () => {
     )
   }
 
-  return (
+  return loading ? <LayoutLoader /> : (
     <div className="grid grid-cols-12 h-screen">
       {/* Sidebar for larger screens */}
       <div className="hidden sm:block sm:col-span-4 border-r border-gray-200 overflow-hidden h-full">
@@ -111,7 +143,7 @@ const Groups = () => {
             <h3 className="text-xl font-semibold">Group List</h3>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <GroupList chatId={chatId} />
+            <GroupList myGroups={groups} chatId={chatId} />
           </div>
         </div>
       </div>
@@ -125,7 +157,7 @@ const Groups = () => {
             <div>
               <h4 className='text-slate-500'>Members</h4>
               <div className='w-full max-w-xl my-6 flex flex-col gap-4'>
-                {SampleUsers.map((user) => (
+                {chat?.members?.map((user) => (
                   <div className='border shadow rounded-xl bg-white px-4' key={user._id}>
                     <UserItem
                       user={user}
@@ -163,7 +195,7 @@ const Groups = () => {
             <h3 className="text-xl font-semibold">Group List</h3>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <GroupList chatId={chatId} />
+            <GroupList myGroups={groups} chatId={chatId} />
           </div>
         </div>
       </Drawer>

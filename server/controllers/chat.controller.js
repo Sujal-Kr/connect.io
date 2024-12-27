@@ -6,16 +6,19 @@ import { emitEvent, uploadToCloud } from "../utils/features.js"
 
 const getMyChats = async (req, res) => {
 
+    try {
+        const chats = await chatModel.find({
+            members: req._id
+        }).populate('members', "avatar name")
 
-    const chats = await chatModel.find({
-        members: req._id
-    }).populate('members', "avatar name")
-
-    return res.json({
-        success: true,
-        message: "Chat retreived successfully",
-        chats
-    })
+        return res.status(200).json({
+            success: true,
+            message: "Chat retreived successfully",
+            chats
+        })
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message })
+    }
 }
 
 const getMyGroupChats = async (req, res) => {
@@ -25,13 +28,14 @@ const getMyGroupChats = async (req, res) => {
             creator: req._id,
             groupChat: true
         }).populate('members', "avatar name")
-        return res.json({
+
+        return res.status(200).json({
             success: true,
             message: "Group chat retreived successfully",
-            data: chats
+            groups: chats
         })
     } catch (err) {
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: err.message,
         })
@@ -39,30 +43,35 @@ const getMyGroupChats = async (req, res) => {
 }
 
 const createGroupChat = async (req, res) => {
-    const { name, members } = req.body
+    try {
+        const { name, members } = req.body
 
-    if (members.length < 2) {
-        return res.json({
-            success: false,
-            message: "Group must have at least 3 members"
+        if (members.length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: "Group must have at least 3 members"
+            })
+        }
+        const allMembers = [...members, req._id]
+
+        const group = await chatModel.create({
+            name,
+            groupChat: true,
+            creator: req._id,
+            members: allMembers
         })
+        emitEvent(req, ALERT, allMembers, { conetent: `Created Group ${group.name}`, chatId: group.chatId })
+        emitEvent(req, REFETCH_CHATS, allMembers)
+
+        return res.status(201).json({
+            success: true,
+            message: `Created Group ${group.name}`,
+            data: group
+        })
+    } catch (err) {
+        console.error(err.message)
+        return res.status(500).json({ success: false, message: err.message })
     }
-    const allMembers = [...members, req._id]
-
-    const group = await chatModel.create({
-        name,
-        groupChat: true,
-        creator: req._id,
-        members: allMembers
-    })
-    emitEvent(req, ALERT, allMembers, `Welcome to the group`)
-    emitEvent(req, REFETCH_CHATS, members)
-
-    return res.json({
-        success: true,
-        message: "Group created successfully",
-        data: group
-    })
 }
 
 const addMembers = async (req, res) => {
@@ -133,25 +142,25 @@ const removeMember = async (req, res) => {
         const { chatId, member } = req.body
         const [chat, user] = await Promise.all([chatModel.findById(chatId), userModel.findById(member, "name")])
         if (!chat) {
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 message: "Chat not found"
             })
         }
         if (!member) {
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 message: "user dose not exit"
             })
         }
         if (chat.members.length <= 3) {
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 message: "Group must have at least 3 members"
             })
         }
         if (chat.creator.toString() !== req._id.toString()) {
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 message: "Unauthorized Operation"
             })
@@ -165,12 +174,12 @@ const removeMember = async (req, res) => {
 
         emitEvent(req, REFETCH_CHATS, chat.members)
 
-        return res.json({
+        return res.status(200).json({
             success: true,
             message: `${user.name} has been kicked out`
         })
     } catch (err) {
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: err.message
         })
@@ -223,7 +232,7 @@ const sendAttachemts = async (req, res) => {
             })
         }
         const files = req.files || []
-        
+
         if (files.length < 1) {
             return res.status(404).json({
                 success: false,
@@ -233,10 +242,10 @@ const sendAttachemts = async (req, res) => {
 
 
         const result = await uploadToCloud(files)
-        
+
         const message = await messageModel.create({
             sender: req._id,
-            attachments:result,
+            attachments: result,
             chatId
         })
 
@@ -246,7 +255,7 @@ const sendAttachemts = async (req, res) => {
                 _id: req._id,
                 name: user?.name
             },
-            attachments:result.map((item)=>({ url: item.url })),
+            attachments: result.map((item) => ({ url: item.url })),
         }
         console.log(chat)
         emitEvent(req, NEW_MESSAGE, chat.members, {
@@ -322,7 +331,7 @@ const getChatDetails = async (req, res) => {
 const renameGroup = async (req, res) => {
     try {
         const { groupName } = req.body
-        console.log(groupName)
+        // console.log(groupName)
         const chat = await chatModel.findById(req.params.id)
         if (!chat) {
             return res.status(404).json({
@@ -346,15 +355,17 @@ const renameGroup = async (req, res) => {
         chat.name = groupName
 
         await chat.save()
-        emitEvent(req, ALERT, chat.members, `Group name has been reanamed to ${groupName}`)
+        // console.log(chat.members)
+        emitEvent(req, ALERT, chat.members, `Group renamed to ${groupName}`)
+        emitEvent(req, REFETCH_CHATS, chat.members, `Group renamed to ${groupName}`)
 
-        return res.json({
+        return res.status(200).json({
             success: true,
             message: `Group name has been reanamed to ${groupName}`,
         })
 
     } catch (err) {
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: err.message,
         })
@@ -414,7 +425,7 @@ const deleteChat = async (req, res) => {
 
 const getMessages = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1; 
+        const page = parseInt(req.query.page) || 1;
         const limit = 20;
         const skip = (page - 1) * limit;
 
@@ -436,7 +447,7 @@ const getMessages = async (req, res) => {
         const count = await messageModel.countDocuments({ chatId: req.params.id });
         const total = Math.ceil(count / limit);
 
-        emitEvent(req, REFETCH_CHATS, chat.members); 
+        // emitEvent(req, REFETCH_CHATS, chat.members);
 
         return res.status(200).json({
             success: true,
