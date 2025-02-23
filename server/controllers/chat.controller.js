@@ -81,7 +81,7 @@ const addMembers = async (req, res) => {
 
         if (!members || members.length < 1) {
 
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 message: "Please provide members"
             });
@@ -94,7 +94,7 @@ const addMembers = async (req, res) => {
             })
         }
         if (!chat.groupChat) {
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
                 message: "This is not a group chat "
             })
@@ -140,6 +140,7 @@ const removeMember = async (req, res) => {
     try {
 
         const { chatId, member } = req.body
+       
         const [chat, user] = await Promise.all([chatModel.findById(chatId), userModel.findById(member, "name")])
         if (!chat) {
             return res.status(400).json({
@@ -361,7 +362,7 @@ const renameGroup = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `Group name has been reanamed to ${groupName}`,
+            message: `Group renamed to ${groupName}`,
         })
 
     } catch (err) {

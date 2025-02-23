@@ -165,7 +165,7 @@ const getMyNotifications = async (req, res) => {
 
 const getMyFriends = async (req, res) => {
     try {
-        const chatId = req.query.chatid
+        const chatId = req.query.chatId
         const chats = await chatModel
             .find({ members: req._id, groupChat: false })
             .populate("members", "name avatar")
@@ -180,17 +180,17 @@ const getMyFriends = async (req, res) => {
                     _id,name,avatar:avatar.url
                 }
             })
-
-        if (chatId) {
+            if (chatId) {
+            
             const chat = await chatModel.findById(chatId)
-            const available = friends.filter(friend => !chat.members.includes(friend))
-            return res.json({
+            const available = friends.filter(friend => !chat.members.includes(friend._id))
+            return res.status(200).json({
                 success: true,
                 message: "Friends Retrived Succesfully",
                 friends: available,
             })
         } else {
-            return res.json({
+            return res.status(200).json({
                 success: true,
                 message: "Friends Retrived Succesfully",
                 friends,

@@ -9,6 +9,7 @@ export const options = {
     maxAge: 1000 * 24 * 60 * 60 * 2,
     secure: true,
     httpOnly: true,
+    sameSite:"none"
 }
 
 export const connectDb = () => {

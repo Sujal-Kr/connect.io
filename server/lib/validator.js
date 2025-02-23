@@ -53,7 +53,7 @@ const removeMemberValidator = () => {
             .notEmpty()
             .withMessage('Chat id is required'),
 
-        body('members')
+        body('member')
             .notEmpty()
             .withMessage("Group member is required")
     ]
